@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 import json
 import datetime
+import asyncio
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -16,6 +17,9 @@ class client(discord.Client):
         intentes.message_content = True
         super().__init__(intents=intentes)
         self.synced = False
+
+    async def setup_hook(self):
+        self.loop.create_task(daily_notification())
 
     async def on_ready(self):
         await self.wait_until_ready()
@@ -191,6 +195,33 @@ async def register_command(interaction: discord.Interaction):
         f"**Channel ID:** {interaction.channel_id}",
         ephemeral=True,
     )
+
+
+async def daily_notification():  #
+    await aclient.wait_until_ready()
+    while not aclient.is_closed():
+        now = datetime.datetime.now()
+        target = now.replace(hour=14, minute=59, second=0, microsecond=0)
+        if now >= target:
+            target += datetime.timedelta(days=1)
+        seconds_until_target = (target - now).total_seconds()
+        # Sleep until then
+        await asyncio.sleep(seconds_until_target)
+
+        # Send notifications
+        if os.path.exists("datum.json"):
+            with open("datum.json", "r") as d:
+                info = json.load(d)
+                print(info[0]["Registration"])
+                for object in info[0]["Registration"]:
+                    if datetime(object) == datetime.datetime.now:
+                        if os.path.exists("server_info.json"):
+                            with open("server_info.json", "r") as f:
+                                data = json.load(f)
+                            for _, channel_id in data:
+                                channel = aclient.get_channel(channel_id)
+                                if channel:
+                                    await channel.send("<@>")
 
 
 aclient.run(TOKEN)
