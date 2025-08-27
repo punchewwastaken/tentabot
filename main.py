@@ -8,7 +8,6 @@ import datetime
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
-DISCORD_SERVER_ID = os.getenv("SERVER_ID")
 
 
 class client(discord.Client):
@@ -21,7 +20,7 @@ class client(discord.Client):
     async def on_ready(self):
         await self.wait_until_ready()
         if not self.synced:
-            await tree.sync(guild=discord.Object(id=int(DISCORD_SERVER_ID)))
+            await tree.sync()
             self.synced = True
 
 
@@ -144,7 +143,6 @@ def eventEmbed():
 
 
 @tree.command(
-    guild=discord.Object(id=int(DISCORD_SERVER_ID)),
     name="submit",
     description="Submits exam or other important events and their date",
 )
@@ -153,12 +151,46 @@ async def slash2(interaction: discord.Interaction):
 
 
 @tree.command(
-    guild=discord.Object(id=int(DISCORD_SERVER_ID)),
     name="info",
     description="somsdfog",
 )
 async def slash2(interaction: discord.Interaction):
     await interaction.response.send_message(embed=eventEmbed())
+
+
+@tree.command(
+    name="register",
+    description="Register this server and channel to receive notifications",
+)
+async def register_command(interaction: discord.Interaction):
+    if os.path.exists("server_info.json"):
+        with open("server_info.json", "r") as f:
+            data = json.load(f)
+    else:
+        data = []
+
+    # Check if this channel is already registered
+    channel_already_registered = any(
+        entry[1] == interaction.channel_id for entry in data
+    )
+
+    if channel_already_registered:
+        await interaction.response.send_message(
+            "This channel is already registered! ✅", ephemeral=True
+        )
+        return
+
+    data.append([interaction.guild_id, interaction.channel_id])
+
+    with open("server_info.json", "w") as f:
+        json.dump(data, f, indent=4)
+
+    await interaction.response.send_message(
+        f"Server registered successfully! 🎉\n"
+        f"**Server ID:** {interaction.guild_id}\n"
+        f"**Channel ID:** {interaction.channel_id}",
+        ephemeral=True,
+    )
 
 
 aclient.run(TOKEN)

@@ -1,20 +1,16 @@
 [
     {
         "Tentamen": [
-            "2025-08-22",
-            "2025-09-20",
-            "2025-09-23",
-            "2025-08-21"
+            null
         ],
         "Registration": [
             null
         ],
         "Omtentamen": [
-            "2025-10-20"
+            null
         ],
         "Terminsregistration": [
-            "2025-08-21",
-            "2025-08-21"
+            null
         ]
     }
 ]
