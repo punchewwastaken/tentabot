@@ -4,11 +4,12 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import os
 import json
-import datetime
 import asyncio
+from datetime import datetime, timedelta
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
+ROLE_ID = os.getenv("ROLE_ID")
 
 
 class client(discord.Client):
@@ -40,8 +41,8 @@ class my_modal(ui.Modal, title="Notification submissions"):
     date_input = ui.TextInput(
         label="When? (YYYY-MM-DD)",
         style=discord.TextStyle.short,
-        placeholder=f"{datetime.datetime.now().year}-{datetime.datetime.now().month:02d}-{datetime.datetime.now().day}",
-        default=f"{datetime.datetime.now().year}-{datetime.datetime.now().month:02d}-{datetime.datetime.now().day}",
+        placeholder=f"{datetime.now().year}-{datetime.now().month:02d}-{datetime.now().day}",
+        default=f"{datetime.now().year}-{datetime.now().month:02d}-{datetime.now().day}",
         required=True,
         max_length=100,
     )
@@ -71,7 +72,7 @@ class my_modal(ui.Modal, title="Notification submissions"):
             return
 
         try:
-            parsed_date = datetime.datetime.strptime(str(self.date_input), "%Y-%m-%d")
+            parsed_date = datetime.strptime(str(self.date_input), "%Y-%m-%d")
         except ValueError:
             await interaction.response.send_message(
                 "❌ Invalid date! Please use the format YYYY-MM-DD.", ephemeral=True
@@ -99,7 +100,7 @@ class my_modal(ui.Modal, title="Notification submissions"):
         await interaction.response.send_message(embed=embed)
 
 
-def write_to_json(event_type="Tentamen", date=str(datetime.datetime.now())):
+def write_to_json(event_type="Tentamen", date=str(datetime.now())):
     with open("datum.json", "r") as f:
         data = json.load(f)
 
@@ -197,31 +198,52 @@ async def register_command(interaction: discord.Interaction):
     )
 
 
-async def daily_notification():  #
+def registration_notification(Today: bool):
+    embed = discord.Embed(title="Registering")
+    text = f"<@&{ROLE_ID}>"
+    if Today:
+        text += "\nRegistration has opened today"
+    else:
+        text += "\nRegistration is closing soon"
+    embed.description = text
+    return embed
+
+
+async def daily_notification():
     await aclient.wait_until_ready()
     while not aclient.is_closed():
-        now = datetime.datetime.now()
-        target = now.replace(hour=14, minute=59, second=0, microsecond=0)
+        now = datetime.now()
+        target = now.replace(hour=15, minute=3, second=10, microsecond=0)
         if now >= target:
-            target += datetime.timedelta(days=1)
+            target += timedelta(days=1)
         seconds_until_target = (target - now).total_seconds()
-        # Sleep until then
         await asyncio.sleep(seconds_until_target)
 
-        # Send notifications
         if os.path.exists("datum.json"):
             with open("datum.json", "r") as d:
                 info = json.load(d)
-                print(info[0]["Registration"])
                 for object in info[0]["Registration"]:
-                    if datetime(object) == datetime.datetime.now:
+                    target_date = datetime.strptime(object, "%Y-%m-%d").date()
+                    current_date = datetime.now().date()
+
+                    EventToday = None
+                    if current_date == target_date:
+                        EventToday = True  # Registration is today
+                    elif current_date == target_date - timedelta(days=9):
+                        EventToday = (
+                            False  # Registration is in 9 days (warn 9 days before)
+                        )
+
+                    if EventToday is not None:
                         if os.path.exists("server_info.json"):
                             with open("server_info.json", "r") as f:
                                 data = json.load(f)
                             for _, channel_id in data:
                                 channel = aclient.get_channel(channel_id)
                                 if channel:
-                                    await channel.send("<@>")
+                                    await channel.send(
+                                        embed=registration_notification(EventToday)
+                                    )
 
 
 aclient.run(TOKEN)
