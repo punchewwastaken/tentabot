@@ -213,7 +213,7 @@ async def daily_notification():
     await aclient.wait_until_ready()
     while not aclient.is_closed():
         now = datetime.now()
-        target = now.replace(hour=15, minute=3, second=10, microsecond=0)
+        target = now.replace(hour=12, minute=0, second=0, microsecond=0)
         if now >= target:
             target += timedelta(days=1)
         seconds_until_target = (target - now).total_seconds()
